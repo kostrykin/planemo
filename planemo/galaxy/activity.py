@@ -903,12 +903,14 @@ def _wait_on_state(ctx, state_func, polling_backoff=0, timeout=None, early_termi
                     # If we got here something has failed and we can return (early)
                     ctx.log(f"Early termination.")
                     return terminal_state
-        if current_non_terminal_states:
+            if current_non_terminal_states:
+                return None
+            if len(current_states) > 1:
+                current_states = current_states - {"skipped"}
+            assert len(current_states) == 1, f"unexpected state(s) found: {current_states}"
+            return current_states.pop()
+        else:
             return None
-        if len(current_states) > 1:
-            current_states = current_states - {"skipped"}
-        assert len(current_states) == 1, f"unexpected state(s) found: {current_states}"
-        return current_states.pop()
 
     timeout = timeout or 60 * 60 * 24
     final_state = wait_on(get_state, "state", timeout, polling_backoff)
