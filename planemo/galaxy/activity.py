@@ -897,11 +897,11 @@ def _wait_on_state(ctx, state_func, polling_backoff=0, timeout=None, early_termi
             "cancelled",
             "failed",
         ]
-        if early_termination or len(current_states & non_terminal_states) == 0:
+        if early_termination:
             for terminal_state in hierarchical_fail_states:
                 if terminal_state in current_states:
                     # If we got here something has failed and we can return (early)
-                    ctx.log(f"Terminal state (early_termination: {early_termination}, current_states: {current_states}).")
+                    ctx.log(f"Early termination.")
                     return terminal_state
         if current_non_terminal_states:
             return None
