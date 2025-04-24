@@ -897,15 +897,32 @@ def _wait_on_state(ctx, state_func, polling_backoff=0, timeout=None, early_termi
             "cancelled",
             "failed",
         ]
+
+        # Continue running, if (A) early termination is disabled, and (B) a non-terminal job state was reported.
         if not early_termination and current_non_terminal_states:
-            return None
-        for terminal_state in hierarchical_fail_states:
-            if terminal_state in current_states:
-                # If we got here something has failed and we can return (early)
-                ctx.log(f"Early termination.")
-                return terminal_state
+            return None  # continue running, re-poll later
+
+        # Early termination is enabled or there was no non-terminal job state reported (¬A ∨ ¬B).
+
+        # Exit if (¬A) early termination is enabled, and a fail state was reported (C).
+        if early_termination:
+            for terminal_state in hierarchical_fail_states:
+                if terminal_state in current_states:
+                    # If we got here something has failed and we can return (early)
+                    ctx.log(f"Early termination: {terminal_state}")
+                    return terminal_state
+
+        # We have either of these situations:
+        #  (1) Early termination is disabled AND non-terminal states were not reported (A ∧ ¬B).
+        #  (2) Early termination is enabled AND fail states were not reported (¬A ∧ ¬C).
+        #  (3) Neither non-terminal states, NOR fail states were reported (¬B ∧ ¬C).
+        
+        # If a job is reported to be in a non-terminal state, re-poll later.
         if current_non_terminal_states:
             return None
+
+        # Situation (1) is now ruled out, it can only be (2) or (3).
+
         if len(current_states) > 1:
             current_states = current_states - {"skipped"}
         assert len(current_states) == 1, f"unexpected state(s) found: {current_states}"
