@@ -897,20 +897,19 @@ def _wait_on_state(ctx, state_func, polling_backoff=0, timeout=None, early_termi
             "cancelled",
             "failed",
         ]
-        if early_termination:
-            for terminal_state in hierarchical_fail_states:
-                if terminal_state in current_states:
-                    # If we got here something has failed and we can return (early)
-                    ctx.log(f"Early termination.")
-                    return terminal_state
-            if current_non_terminal_states:
-                return None
-            if len(current_states) > 1:
-                current_states = current_states - {"skipped"}
-            assert len(current_states) == 1, f"unexpected state(s) found: {current_states}"
-            return current_states.pop()
-        else:
+        if not early_termination and current_non_terminal_states:
             return None
+        for terminal_state in hierarchical_fail_states:
+            if terminal_state in current_states:
+                # If we got here something has failed and we can return (early)
+                ctx.log(f"Early termination.")
+                return terminal_state
+        if current_non_terminal_states:
+            return None
+        if len(current_states) > 1:
+            current_states = current_states - {"skipped"}
+        assert len(current_states) == 1, f"unexpected state(s) found: {current_states}"
+        return current_states.pop()
 
     timeout = timeout or 60 * 60 * 24
     final_state = wait_on(get_state, "state", timeout, polling_backoff)
